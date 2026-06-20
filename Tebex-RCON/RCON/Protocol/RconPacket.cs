@@ -1,4 +1,4 @@
-namespace Tebex.RCON.Protocol
+namespace Tebex_RCON.RCON.Protocol
 {
     /// <summary>
     /// RconPacket is the data type to contain a standard RCON message.

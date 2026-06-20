@@ -1,4 +1,4 @@
-namespace Tebex.Util;
+namespace Tebex_RCON.Util;
 
 /// <summary>
 /// Utility class to represent UX friendly strings and the user intention.

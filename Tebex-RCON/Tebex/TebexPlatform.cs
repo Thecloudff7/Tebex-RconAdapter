@@ -1,5 +1,5 @@
 ﻿
-namespace Tebex.Triage
+namespace Tebex_RCON.Tebex
 {
     /// <summary>
     /// TebexPlatform is a container class for the current plugin version and telemetry information about the current runtime.
@@ -8,10 +8,10 @@ namespace Tebex.Triage
     {
         private String _pluginVersion;
         private TebexTelemetry _telemetry;
-        public TebexPlatform(String pluginVersion, TebexTelemetry _telemetry)
+        public TebexPlatform(String pluginVersion, TebexTelemetry telemetry)
         {
             this._pluginVersion = pluginVersion;
-            this._telemetry = _telemetry;
+            this._telemetry = telemetry;
 
         }
     

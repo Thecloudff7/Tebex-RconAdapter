@@ -1,8 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
-using Tebex.Adapters;
 
-namespace Tebex.RCON.Protocol;
+namespace Tebex_RCON.RCON.Protocol;
 
 /// <summary>
 /// WebsocketRcon is an implementation of Rcon through a Websocket connection.
@@ -38,7 +37,7 @@ public class WebsocketRcon : RconConnection
         {
             closeTask.Wait();
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // can be ignored
         }

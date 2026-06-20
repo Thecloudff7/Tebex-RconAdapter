@@ -1,8 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
-using Tebex.Adapters;
 
-namespace Tebex.RCON.Protocol;
+namespace Tebex_RCON.RCON.Protocol;
 
 /// <summary>
 /// TelnetRcon is an implementation of Rcon through a Telnet connection.

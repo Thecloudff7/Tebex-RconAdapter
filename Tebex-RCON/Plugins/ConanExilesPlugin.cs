@@ -1,16 +1,13 @@
-﻿using Tebex.Adapters;
-using Tebex.API;
-using Tebex.RCON.Protocol;
+﻿using Tebex_RCON.RCON;
+using Tebex_RCON.RCON.Protocol;
+using Tebex_RCON.Tebex;
 
-namespace Tebex.Plugins
+namespace Tebex_RCON.Plugins
 {
     public class ConanExilesPlugin : RconPlugin
     {
-        // For game type auth
-        private int _blueprintConfigVersion;
-        private int _configVersion;
 
-        private List<ConanPlayerInfo> lastPlayerList = new List<ConanPlayerInfo>();
+        private List<ConanPlayerInfo> _lastPlayerList = new List<ConanPlayerInfo>();
         
         public ConanExilesPlugin(TebexRconAdapter adapter) : base(adapter)
         {
@@ -22,7 +19,7 @@ namespace Tebex.Plugins
                 }
                 catch (Exception e)
                 {
-                    _adapter.LogError($"Error while getting online players: {e.Message}");
+                    Adapter.LogError($"Error while getting online players: {e.Message}");
                 }
             });
         }
@@ -32,8 +29,8 @@ namespace Tebex.Plugins
             public int Idx { get; set; }
             public string CharName { get; set; }
             public string PlayerName { get; set; }
-            public string UserID { get; set; }
-            public string PlatformID { get; set; }
+            public string UserId { get; set; }
+            public string PlatformId { get; set; }
             public string PlatformName { get; set; }
             
             public static List<ConanPlayerInfo> ParsePlayerList(string? input)
@@ -55,8 +52,8 @@ namespace Tebex.Plugins
                         Idx = int.Parse(data[0].Trim()),
                         CharName = data[1].Trim(),
                         PlayerName = data[2].Trim(),
-                        UserID = data[3].Trim(),
-                        PlatformID = data[4].Trim(),
+                        UserId = data[3].Trim(),
+                        PlatformId = data[4].Trim(),
                         PlatformName = data[5].Trim()
                     });
                 }
@@ -67,41 +64,41 @@ namespace Tebex.Plugins
 
         public void GetOnlinePlayers()
         {
-            _adapter.LogDebug($"Querying server for online player list...");
-            var listPacket = _rcon.Send("listplayers");
-            var listResponse = _rcon.ReceiveNext();
+            Adapter.LogDebug($"Querying server for online player list...");
+            var listPacket = Rcon.Send("listplayers");
+            var listResponse = Rcon.ReceiveNext();
             
             var currentPlayerList = ConanPlayerInfo.ParsePlayerList(listResponse.Message);
-            _adapter.LogDebug($"Detected {currentPlayerList.Count} online Conan players");
+            Adapter.LogDebug($"Detected {currentPlayerList.Count} online Conan players");
             
             List<string> oldJoins = new List<string>();
-            foreach (var playerInfo in lastPlayerList)
+            foreach (var playerInfo in _lastPlayerList)
             {
-                oldJoins.Add(playerInfo.PlatformID);
+                oldJoins.Add(playerInfo.PlatformId);
             }
             
             List<string> newJoins = new List<string>();
             foreach (var playerInfo in currentPlayerList)
             {
-                if (!oldJoins.Contains(playerInfo.PlatformID))
+                if (!oldJoins.Contains(playerInfo.PlatformId))
                 {
-                    newJoins.Add(playerInfo.PlatformID);
+                    newJoins.Add(playerInfo.PlatformId);
                 }
             }
 
-            lastPlayerList = currentPlayerList;
+            _lastPlayerList = currentPlayerList;
             foreach (var id in newJoins)
             {
                 //TODO Player IP is not accurate
-                _adapter.OnUserConnected(id, "0.0.0.0");
+                Adapter.OnUserConnected(id, "0.0.0.0");
             }
         }
 
         public override bool IsPlayerOnline(TebexApi.DuePlayer duePlayer)
         {
-            foreach (var player in lastPlayerList)
+            foreach (var player in _lastPlayerList)
             {
-                if (player.PlatformID.Equals(duePlayer.UUID) || player.CharName == duePlayer.Name)
+                if (player.PlatformId.Equals(duePlayer.Uuid) || player.CharName == duePlayer.Name)
                 {
                     return true;
                 }
@@ -122,7 +119,7 @@ namespace Tebex.Plugins
 
         public override string ExpandGameUsernameVariables(string cmd, object playerObj)
         {
-            foreach (var playerInfo in lastPlayerList)
+            foreach (var playerInfo in _lastPlayerList)
             {
                 if (playerInfo.Idx == (int)playerObj) //playerObj is player position ID for Conan Exiles
                 {
@@ -143,9 +140,9 @@ namespace Tebex.Plugins
             // Refreshes lastPlayerList
             GetOnlinePlayers();
             
-            foreach (var playerInfo in lastPlayerList)
+            foreach (var playerInfo in _lastPlayerList)
             {
-                if (playerInfo.PlatformID.Equals(idOrUsername) || playerInfo.CharName.Equals(idOrUsername))
+                if (playerInfo.PlatformId.Equals(idOrUsername) || playerInfo.CharName.Equals(idOrUsername))
                 {
                     return playerInfo.Idx;
                 }

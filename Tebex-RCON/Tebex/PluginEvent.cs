@@ -1,10 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using Newtonsoft.Json;
-using Tebex.Adapters;
-using Tebex.API;
-using Tebex.RCON.Protocol;
+using Tebex_RCON.RCON.Protocol;
 
-namespace Tebex.Triage
+namespace Tebex_RCON.Tebex
 {
     public enum EnumEventLevel
     {
@@ -18,13 +16,13 @@ namespace Tebex.Triage
     /// </summary>
     public class PluginEvent
     {
-        public static ConcurrentQueue<PluginEvent> PLUGIN_EVENTS = new ConcurrentQueue<PluginEvent>();
+        public static ConcurrentQueue<PluginEvent> PluginEvents = new ConcurrentQueue<PluginEvent>();
         
         // Data attached to all plugin events, set via Init()
         public static string SERVER_IP = "";
         public static string SERVER_ID = "";
         public static string STORE_URL = "";
-        public static bool IS_DISABLED = false;
+        public static bool IsDisabled = false;
 
         [JsonProperty("game_id")] private string GameId { get; set; }
         [JsonProperty("framework_id")] private string FrameworkId { get; set; }
@@ -44,14 +42,8 @@ namespace Tebex.Triage
         
         [JsonProperty("server_ip")] private string ServerIp { get; set; }
 
-        [JsonIgnore]
-        public TebexPlatform platform;
-        
-        private RconPlugin _plugin;
-        
         public PluginEvent(RconPlugin plugin, TebexPlatform platform, EnumEventLevel level, string message)
         {
-            _plugin = plugin;
             platform = platform;
 
             TebexTelemetry tel = platform.GetTelemetry();
@@ -64,9 +56,9 @@ namespace Tebex.Triage
             EventLevel = level.ToString();
             EventMessage = message;
             Trace = "";
-            ServerIp = PluginEvent.SERVER_IP;
-            ServerId = PluginEvent.SERVER_ID;
-            StoreUrl = PluginEvent.STORE_URL;
+            ServerIp = SERVER_IP;
+            ServerId = SERVER_ID;
+            StoreUrl = STORE_URL;
         }
 
         public PluginEvent WithTrace(string trace)
@@ -83,13 +75,13 @@ namespace Tebex.Triage
 
         public void Send(BaseTebexAdapter adapter)
         {
-            if (IS_DISABLED)
+            if (IsDisabled)
             {
                 return;
             }
 
-            PLUGIN_EVENTS.Enqueue(this);
-            if (PLUGIN_EVENTS.Count >= 10)
+            PluginEvents.Enqueue(this);
+            if (PluginEvents.Count >= 10)
             {
                 SendAllEvents(adapter);
             }
@@ -102,7 +94,7 @@ namespace Tebex.Triage
         /// <param name="adapter"></param>
         public static void SendAllEvents(BaseTebexAdapter adapter)
         {
-            adapter.MakeWebRequest("https://plugin-logs.tebex.io/events", JsonConvert.SerializeObject(PLUGIN_EVENTS), TebexApi.HttpVerb.POST,
+            adapter.MakeWebRequest("https://plugin-logs.tebex.io/events", JsonConvert.SerializeObject(PluginEvents), TebexApi.HttpVerb.POST,
                 (code, body) =>
                 {
                     if (code < 300 && code > 199) // success
@@ -120,7 +112,7 @@ namespace Tebex.Triage
                 }, (pluginLogsApiError) =>
                 {
                     adapter.LogDebug("Failed to send plugin logs. Unexpected Tebex API error: " + pluginLogsApiError);
-                }, (pluginLogsServerErrorCode, pluginLogsServerErrorResponse) =>
+                }, (_, pluginLogsServerErrorResponse) =>
                 {
                     adapter.LogDebug("Failed to send plugin logs. Unexpected server error: " + pluginLogsServerErrorResponse);
                 });
@@ -147,7 +139,7 @@ namespace Tebex.Triage
                 }, (pluginLogsApiError) =>
                 {
                     adapter.LogDebug("Failed to send batched plugin events. Unexpected Tebex API error: " + pluginLogsApiError);
-                }, (pluginLogsServerErrorCode, pluginLogsServerErrorResponse) =>
+                }, (_, pluginLogsServerErrorResponse) =>
                 {
                     adapter.LogDebug("Failed to send batched plugin events. Unexpected server error: " + pluginLogsServerErrorResponse);
                 });
@@ -161,10 +153,10 @@ namespace Tebex.Triage
         private static void _trySendTooLargeEvents(BaseTebexAdapter adapter)
         {
             List<PluginEvent> eventsBatch = new List<PluginEvent>();
-            while (PLUGIN_EVENTS.Count > 0)
+            while (PluginEvents.Count > 0)
             {
                 PluginEvent? eventToSend;
-                var dequeueSuccess = PLUGIN_EVENTS.TryDequeue(out eventToSend);
+                var dequeueSuccess = PluginEvents.TryDequeue(out eventToSend);
                 if (!dequeueSuccess || eventToSend == null)
                 {
                     adapter.LogDebug("failed to dequeue plugin event");

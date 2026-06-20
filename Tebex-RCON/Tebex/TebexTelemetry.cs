@@ -1,4 +1,4 @@
-﻿namespace Tebex.Triage
+﻿namespace Tebex_RCON.Tebex
 {
     /// <summary>
     /// TebexTelemetry is a container class for storing information about the current runtime software and version.

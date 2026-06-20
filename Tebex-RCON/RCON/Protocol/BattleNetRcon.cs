@@ -1,9 +1,8 @@
 using System.Net;
 using System.Text;
 using BattleNET;
-using Tebex.Adapters;
 
-namespace Tebex.RCON.Protocol;
+namespace Tebex_RCON.RCON.Protocol;
 
 /// <summary>
 /// WebsocketRcon is an implementation of the standard Rcon protocol wrapped around BattlEye.
@@ -39,7 +38,7 @@ public class BattleNetRcon : RconConnection
     protected override RconPacket SendPacket(RconPacket.Type packetType, string message)
     {
         var packet = new RconPacket(0, RconPacket.Type.CommandRequest, message);
-        _battlEye.SendCommand(BattlEyeCommand.RConPassword, message);
+        _battlEye?.SendCommand(BattlEyeCommand.RConPassword, message);
         return packet;
     }
 

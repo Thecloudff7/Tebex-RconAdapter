@@ -1,4 +1,4 @@
-namespace Tebex.Util;
+namespace Tebex_RCON.Util;
 
 /// <summary>
 /// Utility class for writing nicely formatted text

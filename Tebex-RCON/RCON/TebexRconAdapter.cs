@@ -1,12 +1,11 @@
 ﻿using System.Text;
 using Newtonsoft.Json;
-using Tebex.API;
-using Tebex.Plugins;
-using Tebex.RCON.Protocol;
-using Tebex.Triage;
-using Tebex.Util;
+using Tebex_RCON.Plugins;
+using Tebex_RCON.RCON.Protocol;
+using Tebex_RCON.Tebex;
+using Tebex_RCON.Util;
 
-namespace Tebex.Adapters
+namespace Tebex_RCON.RCON
 {
     /// <summary>
     /// TebexRconAdapter implements Tebex plugin functions via an RCON connection.
@@ -17,7 +16,7 @@ namespace Tebex.Adapters
         /// Map of Tebex game IDs to the appropriate RCON plugin. An RCON plugin is loaded at startup to provide the
         /// necessary enhanced RCON integration functions.
         /// </summary>
-        private Dictionary<string, Type> PLUGINS = new Dictionary<string, Type>()
+        private Dictionary<string, Type> _plugins = new Dictionary<string, Type>()
         {
             {"Minecraft: Java Edition", typeof(MinecraftPlugin)},
             {"ARK: Survival Evolved", typeof(ArkPlugin)},
@@ -95,7 +94,7 @@ namespace Tebex.Adapters
                 // Attempt to create plugin instance for the store's game type
                 try
                 {
-                    _plugin = Activator.CreateInstance(PLUGINS[gameType], this) as RconPlugin;
+                    _plugin = Activator.CreateInstance(_plugins[gameType], this) as RconPlugin;
                 }
                 catch (Exception e)
                 {
@@ -156,17 +155,17 @@ namespace Tebex.Adapters
                     // Setup timed functions
                     ExecuteEvery(TimeSpan.FromSeconds(45), () =>
                     { 
-                        ProcessCommandQueue(false);
+                        ProcessCommandQueue();
                     });
             
                     ExecuteEvery(TimeSpan.FromSeconds(45), () =>
                     {
-                        DeleteExecutedCommands(false);
+                        DeleteExecutedCommands();
                     });
             
                     ExecuteEvery(TimeSpan.FromSeconds(45), () =>
                     {
-                        ProcessJoinQueue(false);
+                        ProcessJoinQueue();
                     });
                 }
                 catch (Exception e)
@@ -234,15 +233,18 @@ namespace Tebex.Adapters
                 var fileConfig = ReadConfig();
                 _startupConfig = newStartupConfig;
 
-                _startupConfig.CacheLifetime = fileConfig.CacheLifetime;
-                _startupConfig.AutoReportingEnabled = fileConfig.AutoReportingEnabled;
-                _startupConfig.DisableOnlineCheck = fileConfig.DisableOnlineCheck;
-                
-                // If debug mode wasn't requested from env or command line, ensure we read
-                // the set value from the config file
-                if (!newStartupConfig.DebugMode)
+                if (fileConfig != null)
                 {
-                    _startupConfig.DebugMode = fileConfig.DebugMode;    
+                    _startupConfig.CacheLifetime = fileConfig.CacheLifetime;
+                    _startupConfig.AutoReportingEnabled = fileConfig.AutoReportingEnabled;
+                    _startupConfig.DisableOnlineCheck = fileConfig.DisableOnlineCheck;
+
+                    // If debug mode wasn't requested from env or command line, ensure we read
+                    // the set value from the config file
+                    if (!newStartupConfig.DebugMode)
+                    {
+                        _startupConfig.DebugMode = fileConfig.DebugMode;
+                    }
                 }
             }
         }
@@ -251,9 +253,9 @@ namespace Tebex.Adapters
         /// Reads or creates the configuration file for RCON Adapter
         /// </summary>
         /// <returns><see cref="BaseTebexAdapter.TebexConfig"/> with loaded values from config file. Default values if no config file found.</returns>
-        private TebexConfig ReadConfig()
+        private TebexConfig? ReadConfig()
         {
-            var cfg = new TebexConfig();
+            TebexConfig? cfg;
             if (File.Exists(ConfigFilePath))
             {
                 string jsonText = File.ReadAllText(ConfigFilePath);
@@ -303,28 +305,31 @@ namespace Tebex.Adapters
         public override bool ExecuteOnlineCommand(TebexApi.Command command, TebexApi.DuePlayer player, string commandName, string[] args)
         {
             var cmd = ExpandUsernameVariables(command.CommandToRun, player);
-            cmd = _plugin.ExpandGameUsernameVariables(cmd, player);
+            cmd = _plugin?.ExpandGameUsernameVariables(cmd, player);
             
             LogInfo($"> Executing online command: {cmd}");
-            var req = _rcon.Send(cmd);
-            var response = _rcon.ReceiveResponseTo(req.Id, 10);
-            if (!response.Item2.Equals("")) // error message in response pair
+            if (cmd != null)
             {
-                LogError("Failed to run online command: " + response.Item2);
-                return false;
-            }
-            else // no error, successful response
-            {
-                LogInfo($"> Server responded: '{response.Item1.Response}'");    
-            }
+                var req = _rcon.Send(cmd);
+                var response = _rcon.ReceiveResponseTo(req.Id, 10);
+                if (!response.Item2.Equals("")) // error message in response pair
+                {
+                    LogError("Failed to run online command: " + response.Item2);
+                    return false;
+                }
+                else // no error, successful response
+                {
+                    LogInfo($"> Server responded: '{response.Item1.Response}'");    
+                }
             
-            // loosely attempt to determine if we succeeded
-            var lowerResponse = response.Item1.Response.Message.ToLower();
-            if (lowerResponse.Contains("error") || lowerResponse.Contains("invalid") || lowerResponse.Contains("unknown item") || lowerResponse.Contains("failed"))
-            {
-                return false;
+                // loosely attempt to determine if we succeeded
+                var lowerResponse = response.Item1.Response?.Message.ToLower();
+                if (lowerResponse != null && (lowerResponse.Contains("error") || lowerResponse.Contains("invalid") || lowerResponse.Contains("unknown item") || lowerResponse.Contains("failed")))
+                {
+                    return false;
+                }
             }
-            
+
             return true; // successful command
         }
 
@@ -361,7 +366,7 @@ namespace Tebex.Adapters
         public override string ExpandUsernameVariables(string input, TebexApi.DuePlayer player)
         {
             string parsed = input;
-            parsed = parsed.Replace("{id}", player.UUID);
+            parsed = parsed.Replace("{id}", player.Uuid);
             parsed = parsed.Replace("{username}", player.Name);
             return parsed;
         }
@@ -443,26 +448,26 @@ namespace Tebex.Adapters
                     // Pass the response body to any provided handler functions based on the type of response
                     if (response.IsSuccessStatusCode)
                     {
-                        onSuccess?.Invoke(code, content);
+                        onSuccess.Invoke(code, content);
                     }
-                    else if (code >= 400 && code <= 499)
+                    else if (code is >= 400 and <= 499)
                     {
                         // We expect standard formatted TebexErrors for HTTP client error responses
                         var tebexError = JsonConvert.DeserializeObject<TebexApi.TebexError>(content);
-                        onApiError?.Invoke(tebexError);
+                        if (tebexError != null) onApiError.Invoke(tebexError);
                     }
                     else if (code >= 500)
                     {
                         // Server error responses include the error code and any content read from the server.
                         // The response may not necessarily be a JSON response, use caution if attempting to parse as such.
-                        onServerError?.Invoke(code, content);
+                        onServerError.Invoke(code, content);
                     }
                 }
             }
             catch (Exception ex)
             {
                 // Unexpected exceptions still write to server error with the exception message.
-                onServerError?.Invoke(0, ex.Message);
+                onServerError.Invoke(0, ex.Message);
             }
         }
         
@@ -555,7 +560,9 @@ namespace Tebex.Adapters
 
             if (PluginConfig.AutoReportingEnabled)
             {
-                new PluginEvent(_plugin, _plugin.GetPlatform(), EnumEventLevel.WARNING, message).WithMetadata(metadata).Send(this);
+                if (_plugin != null)
+                    new PluginEvent(_plugin, _plugin.GetPlatform(), EnumEventLevel.WARNING, message)
+                        .WithMetadata(metadata).Send(this);
             }
         }
 
@@ -565,7 +572,8 @@ namespace Tebex.Adapters
             
             if (PluginConfig.AutoReportingEnabled)
             {
-                new PluginEvent(_plugin, _plugin.GetPlatform(), EnumEventLevel.ERROR, message).Send(this);
+                if (_plugin != null)
+                    new PluginEvent(_plugin, _plugin.GetPlatform(), EnumEventLevel.ERROR, message).Send(this);
             }
         }
 
@@ -574,7 +582,9 @@ namespace Tebex.Adapters
             _log(message, LogLevel.Error);
             if (PluginConfig.AutoReportingEnabled)
             {
-                new PluginEvent(_plugin, _plugin.GetPlatform(), EnumEventLevel.ERROR, message).WithMetadata(metadata).Send(this);
+                if (_plugin != null)
+                    new PluginEvent(_plugin, _plugin.GetPlatform(), EnumEventLevel.ERROR, message)
+                        .WithMetadata(metadata).Send(this);
             }
         }
         
@@ -599,7 +609,7 @@ namespace Tebex.Adapters
         /// </summary>
         public static void OnProcessExit(object sender, EventArgs e)
         {
-            PluginEvent.SendAllEvents(Instance);
+            if (Instance != null) PluginEvent.SendAllEvents(Instance);
         }
     }
 }
