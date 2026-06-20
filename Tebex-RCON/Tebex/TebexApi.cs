@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
-using Tebex.Adapters;
 
-namespace Tebex.API
+namespace Tebex_RCON.Tebex
 {
     /// <summary>
     /// TebexApi is a client implementation of the Tebex Plugin API providing the model definitions and the endpoints available.
@@ -11,11 +10,11 @@ namespace Tebex.API
         public static readonly string TebexApiBase = "https://plugin.tebex.io/";
         public static readonly string TebexTriageUrl = "https://plugin-logs.tebex.io/";
         
-        public static TebexApi Instance => _apiInstance.Value;
-        public static BaseTebexAdapter Adapter { get; private set; }
+        public static TebexApi Instance => ApiInstance.Value;
+        public static BaseTebexAdapter? Adapter { get; private set; }
 
         // Singleton instance for the API
-        private static readonly Lazy<TebexApi> _apiInstance = new Lazy<TebexApi>(() => new TebexApi());
+        private static readonly Lazy<TebexApi> ApiInstance = new Lazy<TebexApi>(() => new TebexApi());
 
         public TebexApi()
         {
@@ -49,10 +48,11 @@ namespace Tebex.API
         }
 
         private static void Send(string endpoint, string body, HttpVerb method = HttpVerb.GET,
-            ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+            ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
-            Adapter.MakeWebRequest(TebexApiBase + endpoint, body, method, onSuccess, onApiError, onServerError);
+            if (onSuccess != null && onApiError != null && onServerError != null)
+                Adapter?.MakeWebRequest(TebexApiBase + endpoint, body, method, onSuccess, onApiError, onServerError);
         }
 
         #region Events
@@ -77,8 +77,8 @@ namespace Tebex.API
             }
         }
         
-        public void PlayerJoinEvent(List<TebexJoinEventInfo> events, ApiSuccessCallback onSuccess, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void PlayerJoinEvent(List<TebexJoinEventInfo> events, ApiSuccessCallback onSuccess, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send("events", JsonConvert.SerializeObject(events), HttpVerb.POST, onSuccess, onApiError,
                 onServerError);
@@ -88,12 +88,12 @@ namespace Tebex.API
         
         #region Information
 
-        public class TebexAccountInfo
+        public class TebexAccountInfo(TebexCurrency currency)
         {
             [JsonProperty("id")] public int Id { get; set; }
             [JsonProperty("domain")] public string Domain { get; set; } = "";
             [JsonProperty("name")] public string Name { get; set; } = "";
-            [JsonProperty("currency")] public TebexCurrency Currency { get; set; }
+            [JsonProperty("currency")] public TebexCurrency Currency { get; set; } = currency;
             [JsonProperty("online_mode")] public bool OnlineMode { get; set; }
             [JsonProperty("game_type")] public string GameType { get; set; } = "";
             [JsonProperty("log_events")] public bool LogEvents { get; set; }
@@ -111,17 +111,28 @@ namespace Tebex.API
             [JsonProperty("name")] public string Name { get; set; } = "";
         }
 
-        public class TebexStoreInfo
+        public class TebexStoreInfo(TebexAccountInfo accountInfo, TebexServerInfo serverInfo)
         {
-            [JsonProperty("account")] public TebexAccountInfo AccountInfo { get; set; }
-            [JsonProperty("server")] public TebexServerInfo ServerInfo { get; set; }
+            [JsonProperty("account")] public TebexAccountInfo AccountInfo { get; set; } = accountInfo;
+            [JsonProperty("server")] public TebexServerInfo ServerInfo { get; set; } = serverInfo;
         }
 
         public class Category
         {
+            public Category(int id, int order, string name, bool onlySubcategories, List<Category> subcategories, List<Package> packages, object guiItem)
+            {
+                Id = id;
+                Order = order;
+                Name = name;
+                OnlySubcategories = onlySubcategories;
+                Subcategories = subcategories;
+                Packages = packages;
+                GuiItem = guiItem;
+            }
+
             [JsonProperty("id")] public int Id { get; set; }
             [JsonProperty("order")] public int Order { get; set; }
-            [JsonProperty("name")] public string Name { get; set; } = "";
+            [JsonProperty("name")] public string Name { get; set; }
             [JsonProperty("only_subcategories")] public bool OnlySubcategories { get; set; }
             [JsonProperty("subcategories")] public List<Category> Subcategories { get; set; }
             [JsonProperty("packages")] public List<Package> Packages { get; set; }
@@ -136,11 +147,43 @@ namespace Tebex.API
 
         public class Package
         {
+            public Package(int id, string name, string order, string image, double price, PackageSaleData sale, int expiryLength, string expiryPeriod, string type, Category category, int globalLimit, string globalLimitPeriod, int userLimit, string userLimitPeriod, List<TebexServerInfo> servers, List<object> requiredPackages, bool requireAny, bool createGiftcard, string showUntil, string guiItem, bool disabled, bool disableQuantity, bool customPrice, bool chooseServer, bool limitExpires, bool inheritCommands, bool variableGiftcard, string description)
+            {
+                Id = id;
+                Name = name;
+                Order = order;
+                Image = image;
+                Price = price;
+                Sale = sale;
+                ExpiryLength = expiryLength;
+                ExpiryPeriod = expiryPeriod;
+                Type = type;
+                Category = category;
+                GlobalLimit = globalLimit;
+                GlobalLimitPeriod = globalLimitPeriod;
+                UserLimit = userLimit;
+                UserLimitPeriod = userLimitPeriod;
+                Servers = servers;
+                RequiredPackages = requiredPackages;
+                RequireAny = requireAny;
+                CreateGiftcard = createGiftcard;
+                ShowUntil = showUntil;
+                GuiItem = guiItem;
+                Disabled = disabled;
+                DisableQuantity = disableQuantity;
+                CustomPrice = customPrice;
+                ChooseServer = chooseServer;
+                LimitExpires = limitExpires;
+                InheritCommands = inheritCommands;
+                VariableGiftcard = variableGiftcard;
+                Description = description;
+            }
+
             [JsonProperty("id")] public int Id { get; set; }
 
-            [JsonProperty("name")] public string Name { get; set; } = "";
+            [JsonProperty("name")] public string Name { get; set; }
 
-            [JsonProperty("order")] public string Order { get; set; } = "";
+            [JsonProperty("order")] public string Order { get; set; }
 
             [JsonProperty("image")] public string Image { get; set; }
 
@@ -150,23 +193,23 @@ namespace Tebex.API
 
             [JsonProperty("expiry_length")] public int ExpiryLength { get; set; }
 
-            [JsonProperty("expiry_period")] public string ExpiryPeriod { get; set; } = "";
+            [JsonProperty("expiry_period")] public string ExpiryPeriod { get; set; }
 
-            [JsonProperty("type")] public string Type { get; set; } = "";
+            [JsonProperty("type")] public string Type { get; set; }
 
             [JsonProperty("category")] public Category Category { get; set; }
 
             [JsonProperty("global_limit")] public int GlobalLimit { get; set; }
 
-            [JsonProperty("global_limit_period")] public string GlobalLimitPeriod { get; set; } = "";
+            [JsonProperty("global_limit_period")] public string GlobalLimitPeriod { get; set; }
 
             [JsonProperty("user_limit")] public int UserLimit { get; set; }
 
-            [JsonProperty("user_limit_period")] public string UserLimitPeriod { get; set; } = "";
+            [JsonProperty("user_limit_period")] public string UserLimitPeriod { get; set; }
 
             [JsonProperty("servers")] public List<TebexServerInfo> Servers { get; set; }
 
-            [JsonProperty("required_packages")] public List<object> RequiredPackages { get; set; } //TODO
+            [JsonProperty("required_packages")] public List<object> RequiredPackages { get; set; }
 
             [JsonProperty("require_any")] public bool RequireAny { get; set; }
 
@@ -174,7 +217,7 @@ namespace Tebex.API
 
             [JsonProperty("show_until")] public string ShowUntil { get; set; }
 
-            [JsonProperty("gui_item")] public string GuiItem { get; set; } = "";
+            [JsonProperty("gui_item")] public string GuiItem { get; set; }
 
             [JsonProperty("disabled")] public bool Disabled { get; set; }
 
@@ -191,7 +234,7 @@ namespace Tebex.API
             [JsonProperty("variable_giftcard")] public bool VariableGiftcard { get; set; }
 
             // Description is not provided unless verbose=true is passed to the Packages endpoint
-            [JsonProperty("description")] public string Description { get; set; } = "";
+            [JsonProperty("description")] public string Description { get; set; }
 
             public string GetFriendlyPayFrequency()
             {
@@ -211,9 +254,7 @@ namespace Tebex.API
             [JsonProperty("expires")] public string Expires { get; set; } = "";
         }
 
-        public delegate void Callback(int code, string body);
-
-        public void Information(ApiSuccessCallback success, ApiErrorCallback error = null)
+        public void Information(ApiSuccessCallback success, ApiErrorCallback? error = null)
         {
             Send("information", "", HttpVerb.GET, success, error);
         }
@@ -225,10 +266,10 @@ namespace Tebex.API
         /**
          * Response received from /queue
          */
-        public class CommandQueueResponse
+        public class CommandQueueResponse(CommandQueueMeta meta, List<DuePlayer> players)
         {
-            [JsonProperty("meta")] public CommandQueueMeta Meta { get; set; }
-            [JsonProperty("players")] public List<DuePlayer> Players { get; set; }
+            [JsonProperty("meta")] public CommandQueueMeta Meta { get; set; } = meta;
+            [JsonProperty("players")] public List<DuePlayer> Players { get; set; } = players;
         }
 
         /**
@@ -252,24 +293,24 @@ namespace Tebex.API
 
             [JsonProperty("name")] public string Name { get; set; } = "";
 
-            [JsonProperty("uuid")] public string UUID { get; set; } = "";
+            [JsonProperty("uuid")] public string Uuid { get; set; } = "";
         }
 
 
         /**
          * The response received from /queue/online-commands
          */
-        public class OnlineCommandsResponse
+        public class OnlineCommandsResponse(OnlineCommandsPlayer player, List<Command> commands)
         {
-            [JsonProperty("player")] public OnlineCommandsPlayer Player { get; set; }
-            [JsonProperty("commands")] public List<Command> Commands { get; set; }
+            [JsonProperty("player")] public OnlineCommandsPlayer Player { get; set; } = player;
+            [JsonProperty("commands")] public List<Command> Commands { get; set; } = commands;
         }
 
-        public class OnlineCommandsPlayer
+        public class OnlineCommandsPlayer(string id, string username, OnlineCommandPlayerMeta meta)
         {
-            [JsonProperty("id")] public string Id { get; set; }
-            [JsonProperty("username")] public string Username { get; set; }
-            [JsonProperty("meta")] public OnlineCommandPlayerMeta Meta { get; set; }
+            [JsonProperty("id")] public string Id { get; set; } = id;
+            [JsonProperty("username")] public string Username { get; set; } = username;
+            [JsonProperty("meta")] public OnlineCommandPlayerMeta Meta { get; set; } = meta;
         }
 
         public class OnlineCommandPlayerMeta
@@ -285,23 +326,23 @@ namespace Tebex.API
             [JsonProperty("slots")] public int Slots { get; set; }
         }
 
-        public class OfflineCommandsMeta
+        public class OfflineCommandsMeta(string limited)
         {
-            [JsonProperty("limited")] public string Limited { get; set; }
+            [JsonProperty("limited")] public string Limited { get; set; } = limited;
         }
-        public class OfflineCommandsResponse
+        public class OfflineCommandsResponse(OfflineCommandsMeta meta, List<Command> commands)
         {
-            [JsonProperty("meta")] public OfflineCommandsMeta Meta { get; set;  }
-            [JsonProperty("commands")] public List<Command> Commands { get; set;  }
+            [JsonProperty("meta")] public OfflineCommandsMeta Meta { get; set;  } = meta;
+            [JsonProperty("commands")] public List<Command> Commands { get; set;  } = commands;
         }
-        public class Command
+        public class Command(PlayerInfo player)
         {
             [JsonProperty("id")] public int Id { get; set; }
             [JsonProperty("command")] public string CommandToRun { get; set; } = "";
             [JsonProperty("payment")] public long Payment { get; set; }
             [JsonProperty(NullValueHandling=NullValueHandling.Ignore)] public long PackageRef { get; set; }
             [JsonProperty("conditions")] public CommandConditions Conditions { get; set; } = new CommandConditions();
-            [JsonProperty("player")] public PlayerInfo Player { get; set; }
+            [JsonProperty("player")] public PlayerInfo Player { get; set; } = player;
         }
 
         /**
@@ -309,8 +350,8 @@ namespace Tebex.API
          * This endpoint also returns any offline commands to be processed and the amount of seconds to wait before performing the queue check again.
          * All clients should strictly follow the response of `next_check`, failure to do so would result in your secret key being revoked or IP address being banned from accessing the API.
          */
-        public void GetCommandQueue(ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetCommandQueue(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send("queue", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -318,8 +359,8 @@ namespace Tebex.API
         /**
          * Gets commands that can be executed on the player even if they are offline.
          */
-        public void GetOfflineCommands(ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetOfflineCommands(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send($"queue/offline-commands", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -327,32 +368,29 @@ namespace Tebex.API
         /**
          * Gets commands that can be executed for the given player if they are online.
          */
-        public void GetOnlineCommands(int playerId, ApiSuccessCallback onSuccess, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetOnlineCommands(int playerId, ApiSuccessCallback onSuccess, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send($"queue/online-commands/{playerId}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
 
-        private class DeleteCommandsPayload
+        private class DeleteCommandsPayload(int[] ids)
         {
             /**
              * An array of one or more command IDs to delete.
              */
             [JsonProperty("ids")]
-            public int[] Ids { get; set; }
+            public int[] Ids { get; set; } = ids;
         }
 
         /**
          * Deletes one or more commands that have been executed on the game server.
          * An empty response with the status code of 204 No Content will be returned on completion.
          */
-        public void DeleteCommands(int[] ids, ApiSuccessCallback onSuccess, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void DeleteCommands(int[] ids, ApiSuccessCallback onSuccess, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
-            var payload = new DeleteCommandsPayload
-            {
-                Ids = ids
-            };
+            var payload = new DeleteCommandsPayload(ids);
             Send("queue", JsonConvert.SerializeObject(payload), HttpVerb.DELETE, onSuccess, onApiError,
                 onServerError);
         }
@@ -364,19 +402,19 @@ namespace Tebex.API
         /**
          * Response from /listing containing the categories and their packages.
          */
-        public class ListingsResponse
+        public class ListingsResponse(List<Category> categories)
         {
-            [JsonProperty("categories")] public List<Category> categories { get; set; }
+            [JsonProperty("categories")] public List<Category> Categories { get; set; } = categories;
         }
 
         /**
          * Get the categories and packages which should be displayed to players in game. The returned order of this endpoint
          * does not reflect the desired order of the category/packages - please order based on the order object.
          */
-        public void GetListing(ApiSuccessCallback onSuccess = null, ApiErrorCallback onError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetListing(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onError = null,
+            ServerErrorCallback? onServerError = null)
         {
-            Send("listing", "", HttpVerb.GET, onSuccess, onError, onServerError);
+            if (onSuccess != null && onError != null && onServerError != null) Send("listing", "", HttpVerb.GET, onSuccess, onError, onServerError);
         }
 
         #endregion
@@ -387,9 +425,9 @@ namespace Tebex.API
          * Get a list of all packages on the webstore. Pass verbose=true to include descriptions of the packages.
          * API returns a list of JSON encoded Packages.
          */
-        public void GetAllPackages(bool verbose, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetAllPackages(bool verbose, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send(verbose ? "packages?verbose=true" : "packages", "", HttpVerb.GET, onSuccess, onApiError,
                 onServerError);
@@ -398,9 +436,9 @@ namespace Tebex.API
         /**
          * Gets a specific package from the webstore by its ID. Returns JSON-encoded Package object.
          */
-        public void GetPackage(string packageId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetPackage(string packageId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send($"package/{packageId}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -418,16 +456,16 @@ namespace Tebex.API
         #region Community Goals
 
         // Retrieves all community goals from the account.
-        public void GetCommunityGoals(ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetCommunityGoals(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send("community_goals", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
 
         // Retrieves a specific community goal.
-        public void GetCommunityGoal(int goalId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetCommunityGoal(int goalId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send($"community_goals/{goalId}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -445,19 +483,19 @@ namespace Tebex.API
         /**
          * Retrieve the latest payments (up to a maximum of 100) made on the webstore.
          */
-        public void GetAllPayments(int limit = 100, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void GetAllPayments(int limit = 100, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
-            var payload = new PaymentsPayload
-            {
-                Limit = limit
-            };
-
             if (limit > 100)
             {
                 limit = 100;
             }
-
+            
+            var payload = new PaymentsPayload
+            {
+                Limit = limit
+            };
+         
             Send($"payments", JsonConvert.SerializeObject(payload), HttpVerb.GET, onSuccess, onApiError,
                 onServerError);
         }
@@ -465,8 +503,8 @@ namespace Tebex.API
         /**
          * Return all payments as a page, at the given page number.
          */
-        public void GetAllPaymentsPaginated(int pageNumber, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void GetAllPaymentsPaginated(int pageNumber, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             Send($"payments?paged={pageNumber}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -474,8 +512,8 @@ namespace Tebex.API
         /**
          * Retrieve a specific payment by transaction id.
          */
-        public void GetPayment(string transactionId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void GetPayment(string transactionId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             Send($"payments/{transactionId}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -495,7 +533,7 @@ namespace Tebex.API
          * Creates a URL which will take the player to a checkout area in order to purchase the given item.
          */
         public void CreateCheckoutUrl(int packageId, string username, ApiSuccessCallback success,
-            ApiErrorCallback error = null)
+            ApiErrorCallback? error = null)
         {
             var payload = new CreateCheckoutPayload
             {
@@ -515,14 +553,14 @@ namespace Tebex.API
             //TODO            
         }
 
-        public void GetAllGiftCards(ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetAllGiftCards(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send("gift-cards", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
 
-        public void GetGiftCard(string giftCardId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void GetGiftCard(string giftCardId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             Send($"gift-cards/{giftCardId}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -534,8 +572,8 @@ namespace Tebex.API
             [JsonProperty("amount")] public double Amount { get; set; }
         }
 
-        public void CreateGiftCard(string expiresAt, string note, int amount, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void CreateGiftCard(string expiresAt, string note, int amount, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             var payload = new CreateGiftCardPayload
             {
@@ -547,8 +585,8 @@ namespace Tebex.API
                 onServerError);
         }
 
-        public void VoidGiftCard(string giftCardId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void VoidGiftCard(string giftCardId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             Send($"gift-cards/{giftCardId}", "", HttpVerb.DELETE, onSuccess, onApiError, onServerError);
         }
@@ -558,8 +596,8 @@ namespace Tebex.API
             [JsonProperty("amount")] public string Amount { get; set; } = "";
         }
 
-        public void TopUpGiftCard(string giftCardId, double amount, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void TopUpGiftCard(string giftCardId, double amount, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             var payload = new TopUpGiftCardPayload
             {
@@ -572,14 +610,14 @@ namespace Tebex.API
 
         #region Coupons
 
-        public void GetAllCoupons(ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetAllCoupons(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send("coupons", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
 
-        public void GetCouponById(string couponId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void GetCouponById(string couponId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             Send($"coupons/{couponId}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -588,32 +626,27 @@ namespace Tebex.API
 
         #region Bans
 
-        public void GetAllBans(ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetAllBans(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             //var response = client.SendAsyncRequest("bans", HttpMethod.Get);
             Send("bans", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
 
-        public class CreateBanPayload
+        public class CreateBanPayload(string reason, string ip, string user)
         {
-            [JsonProperty("reason")] public string Reason { get; set; }
-            [JsonProperty("ip")] public string IP { get; set; }
+            [JsonProperty("reason")] public string Reason { get; set; } = reason;
+            [JsonProperty("ip")] public string Ip { get; set; } = ip;
 
             /** Username or UUID of the player to ban */
             [JsonProperty("user")]
-            public string User { get; set; }
+            public string User { get; set; } = user;
         }
 
-        public void CreateBan(string reason, string ip, string userId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+        public void CreateBan(string reason, string ip, string userId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
-            var payload = new CreateBanPayload
-            {
-                Reason = reason,
-                IP = ip,
-                User = userId
-            };
+            var payload = new CreateBanPayload(reason,ip,userId);
             Send("bans", JsonConvert.SerializeObject(payload), HttpVerb.POST, onSuccess, onApiError,
                 onServerError);
         }
@@ -622,8 +655,8 @@ namespace Tebex.API
 
         #region Sales
 
-        public void GetAllSales(ApiSuccessCallback onSuccess = null, ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetAllSales(ApiSuccessCallback? onSuccess = null, ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send("sales", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -635,30 +668,35 @@ namespace Tebex.API
         /**
          * Root object returned by the /user endpoint, containing PlayerInfo
          */
-        public class UserInfoResponse
+        public class UserInfoResponse(
+            PlayerInfo player,
+            int banCount,
+            int chargebackRate,
+            List<PaymentInfo> payments,
+            object[] purchaseTotals)
         {
-            [JsonProperty("player")] public PlayerInfo Player { get; set; }
+            [JsonProperty("player")] public PlayerInfo Player { get; set; } = player;
 
-            [JsonProperty("banCount")] public int BanCount { get; set; }
+            [JsonProperty("banCount")] public int BanCount { get; set; } = banCount;
 
-            [JsonProperty("chargebackRate")] public int ChargebackRate { get; set; }
+            [JsonProperty("chargebackRate")] public int ChargebackRate { get; set; } = chargebackRate;
 
-            [JsonProperty("payments")] public List<PaymentInfo> Payments { get; set; }
+            [JsonProperty("payments")] public List<PaymentInfo> Payments { get; set; } = payments;
 
-            [JsonProperty("purchaseTotals")] public object[] PurchaseTotals { get; set; }
+            [JsonProperty("purchaseTotals")] public object[] PurchaseTotals { get; set; } = purchaseTotals;
         }
 
-        public class PaymentInfo
+        public class PaymentInfo(string transactionId, long time, double price, string currency, int status)
         {
-            [JsonProperty("txn_id")] public string TransactionId { get; set; }
+            [JsonProperty("txn_id")] public string TransactionId { get; set; } = transactionId;
 
-            [JsonProperty("time")] public long Time { get; set; }
+            [JsonProperty("time")] public long Time { get; set; } = time;
 
-            [JsonProperty("price")] public double Price { get; set; }
+            [JsonProperty("price")] public double Price { get; set; } = price;
 
-            [JsonProperty("currency")] public string Currency { get; set; }
+            [JsonProperty("currency")] public string Currency { get; set; } = currency;
 
-            [JsonProperty("status")] public int Status { get; set; }
+            [JsonProperty("status")] public int Status { get; set; } = status;
         }
 
         /**
@@ -666,6 +704,15 @@ namespace Tebex.API
          */
         public class PlayerInfo
         {
+            public PlayerInfo(string id, string username, OnlineCommandPlayerMeta meta, string uuid, int pluginUsernameId)
+            {
+                Id = id;
+                Username = username;
+                Meta = meta;
+                Uuid = uuid;
+                PluginUsernameId = pluginUsernameId;
+            }
+
             [JsonProperty("id")] public string Id { get; set; }
 
             //FIXME sometimes referred to as `name` or `username` alternatively?
@@ -675,14 +722,14 @@ namespace Tebex.API
 
             /** Only populated by offline commands */
             [JsonProperty("uuid")]
-            public string Uuid { get; set; } = "";
+            public string Uuid { get; set; }
             
             [JsonProperty("plugin_username_id")] public int PluginUsernameId { get; set; }
         }
 
-        public void GetUser(string targetUserId, ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null,
-            ServerErrorCallback onServerError = null)
+        public void GetUser(string targetUserId, ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null,
+            ServerErrorCallback? onServerError = null)
         {
             Send($"user/{targetUserId}", "", HttpVerb.GET, onSuccess, onApiError, onServerError);
         }
@@ -691,35 +738,39 @@ namespace Tebex.API
 
         #region Customer Purchases
 
-        public class PackagePurchaseInfo
+        public class PackagePurchaseInfo(string name)
         {
             [JsonProperty("id")]
             public int Id { get; set; }
 
             [JsonProperty("name")]
-            public string Name { get; set; }
+            public string Name { get; set; } = name;
         }
 
-        public class CustomerPackagePurchaseRecord
+        public class CustomerPackagePurchaseRecord(
+            string transactionId,
+            DateTime date,
+            int quantity,
+            PackagePurchaseInfo package)
         {
             [JsonProperty("txn_id")]
-            public string TransactionId { get; set; }
+            public string TransactionId { get; set; } = transactionId;
 
             [JsonProperty("date")]
-            public DateTime Date { get; set; }
+            public DateTime Date { get; set; } = date;
 
             [JsonProperty("quantity")]
-            public int Quantity { get; set; }
+            public int Quantity { get; set; } = quantity;
 
             [JsonProperty("package")]
-            public PackagePurchaseInfo Package { get; set; }
+            public PackagePurchaseInfo Package { get; set; } = package;
         }
         
         // Return a list of all active (non-expired) packages that a customer has purchased.
         // If packageId is provided, filter down to a single package ID, if you want to check if a specific package has been purchased. 
         public void GetActivePackagesForCustomer(string userId, int? packageId = null,
-            ApiSuccessCallback onSuccess = null,
-            ApiErrorCallback onApiError = null, ServerErrorCallback onServerError = null)
+            ApiSuccessCallback? onSuccess = null,
+            ApiErrorCallback? onApiError = null, ServerErrorCallback? onServerError = null)
         {
             if (packageId == null)
             {

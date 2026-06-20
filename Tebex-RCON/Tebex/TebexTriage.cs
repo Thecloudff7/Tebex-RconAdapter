@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Tebex.Triage
+namespace Tebex_RCON.Tebex
 {
     public class TebexTriage
     {

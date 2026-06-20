@@ -1,8 +1,8 @@
-﻿using Tebex.Adapters;
-using Tebex.API;
-using Tebex.RCON.Protocol;
+﻿using Tebex_RCON.RCON;
+using Tebex_RCON.RCON.Protocol;
+using Tebex_RCON.Tebex;
 
-namespace Tebex.Plugins
+namespace Tebex_RCON.Plugins
 {
     public class SevenDaysPlugin : RconPlugin
     {
@@ -12,7 +12,7 @@ namespace Tebex.Plugins
 
         public override RconConnection CreateRconConnection(string host, int port, string password)
         {
-            return new TelnetRcon(_adapter, host, port, password);
+            return new TelnetRcon(Adapter, host, port, password);
         }
 
         public override string GetPluginVersion()
@@ -22,18 +22,18 @@ namespace Tebex.Plugins
 
         public override bool IsPlayerOnline(TebexApi.DuePlayer player)
         {
-            _rcon.Send("listplayers");
+            Rcon.Send("listplayers");
             
             bool found = false;
-            var cmdExecMessage = _rcon.ReceiveNext();
+            var cmdExecMessage = Rcon.ReceiveNext();
 
             while (true)
             {
                 // After command exec message, this will be the first connected player
-                var packet = _rcon.ReceiveNext();
+                var packet = Rcon.ReceiveNext();
 
                 //TODO possible conflict with other commands that might be ran at the same time?
-                if (packet.Message.Contains("pltfmid=") && packet.Message.Contains(player.UUID))
+                if (packet.Message.Contains("pltfmid=") && packet.Message.Contains(player.Uuid))
                 {
                     found = true;
                     break;

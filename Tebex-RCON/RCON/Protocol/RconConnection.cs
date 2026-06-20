@@ -1,8 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
-using Tebex.Adapters;
 
-namespace Tebex.RCON.Protocol;
+namespace Tebex_RCON.RCON.Protocol;
 
 /// <summary>
 /// An RconConnection handles a standard implementation of the RCON protocol over TCP.
@@ -291,35 +290,41 @@ public class RconConnection
     /// <param name="timeoutSeconds">The number of seconds to wait for data before considering timeout.</param>
     /// <returns>The next <see cref="RconPacket"/> received by the client.</returns>
     /// <exception cref="InvalidOperationException"></exception>
-    protected virtual RconPacket ReadPacket(int timeoutSeconds)
+    protected virtual RconPacket? ReadPacket(int timeoutSeconds)
     {
-        Stream.ReadTimeout = timeoutSeconds * 1000;
-        
-        var response = new byte[4096];
-        var bytesRead = Stream.Read(response, 0, response.Length);
-        if (bytesRead < 14)
+        if (Stream != null)
         {
-            throw new InvalidOperationException("Received invalid packet size.");
-        }
-        
-        // Read the next RCON packet
-        var responseId = BitConverter.ToInt32(response, 4);
-        var responseType = BitConverter.ToInt32(response, 8);
-        var responseString = Encoding.UTF8.GetString(response, 12, bytesRead - 14);
-        
-        // Create a new RconPacket based on the received data. We only add this packet to Responses if it is an actual
-        // response to a command. Generally server logs and other data will use -1 as their packet ID.
-        var packet = new RconPacket(responseId, (RconPacket.Type)responseType, responseString);
-        if (packet.Id > 0)
-        {
-            if (Responses.ContainsKey(packet.Id))
+            Stream.ReadTimeout = timeoutSeconds * 1000;
+
+            var response = new byte[4096];
+            var bytesRead = Stream.Read(response, 0, response.Length);
+            if (bytesRead < 14)
             {
-                Responses.Remove(packet.Id);
+                throw new InvalidOperationException("Received invalid packet size.");
             }
-            
-            Responses.Add(packet.Id, packet);
+
+            // Read the next RCON packet
+            var responseId = BitConverter.ToInt32(response, 4);
+            var responseType = BitConverter.ToInt32(response, 8);
+            var responseString = Encoding.UTF8.GetString(response, 12, bytesRead - 14);
+
+            // Create a new RconPacket based on the received data. We only add this packet to Responses if it is an actual
+            // response to a command. Generally server logs and other data will use -1 as their packet ID.
+            var packet = new RconPacket(responseId, (RconPacket.Type)responseType, responseString);
+            if (packet.Id > 0)
+            {
+                if (Responses.ContainsKey(packet.Id))
+                {
+                    Responses.Remove(packet.Id);
+                }
+
+                Responses.Add(packet.Id, packet);
+            }
+
+            return packet;
         }
-        return packet;
+
+        return null;
     }
 
     /// <summary>

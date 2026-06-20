@@ -1,8 +1,8 @@
-﻿using Tebex.Adapters;
-using Tebex.API;
-using Tebex.RCON.Protocol;
+﻿using Tebex_RCON.RCON;
+using Tebex_RCON.RCON.Protocol;
+using Tebex_RCON.Tebex;
 
-namespace Tebex.Plugins
+namespace Tebex_RCON.Plugins
 {
     public class MinecraftPlugin : RconPlugin
     {

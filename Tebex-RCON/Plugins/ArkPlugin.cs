@@ -1,8 +1,8 @@
-﻿using Tebex.Adapters;
-using Tebex.API;
-using Tebex.RCON.Protocol;
+﻿using Tebex_RCON.RCON;
+using Tebex_RCON.RCON.Protocol;
+using Tebex_RCON.Tebex;
 
-namespace Tebex.Plugins
+namespace Tebex_RCON.Plugins
 {
     public class ArkPlugin : RconPlugin
     {
@@ -12,28 +12,28 @@ namespace Tebex.Plugins
         {
             TebexRconAdapter.ExecuteEvery(TimeSpan.FromSeconds(5), () =>
             {
-                _adapter.LogDebug("listplayers");
+                Adapter.LogDebug("listplayers");
                 
-                if (_adapter.GetRcon() == null)
+                if (Adapter.GetRcon() == null)
                 {
-                    _adapter.LogDebug("no rcon");
+                    Adapter.LogDebug("no rcon");
                     return;
                 }
 
-                if (!_adapter.GetRcon().IsConnected())
+                if (!Adapter.GetRcon().IsConnected())
                 {
                     return;
                 }
                 
-                var listPlayersCommand = _adapter.GetRcon().Send("listplayers");
+                var listPlayersCommand = Adapter.GetRcon().Send("listplayers");
                 RconPacket listPlayersResponse;
-                listPlayersResponse = _adapter.GetRcon().ReceiveNext();
+                listPlayersResponse = Adapter.GetRcon().ReceiveNext();
                 
                 // Keep Alive packets seem to knock things out of order, we can just ignore when we grab the wrong response
                 // because we should be updating the list of players every few seconds anyway.
                 if (listPlayersResponse != null && !listPlayersResponse.Message.Contains("But no response!!"))
                 {
-                    _adapter.LogDebug("received player list: " + listPlayersResponse.Message);
+                    Adapter.LogDebug("received player list: " + listPlayersResponse.Message);
                     _lastPlayerList = listPlayersResponse.Message;
                 }
             });
@@ -46,17 +46,17 @@ namespace Tebex.Plugins
 
         public override bool IsPlayerOnline(TebexApi.DuePlayer player)
         {
-            bool foundUuid = _lastPlayerList.Contains(player.UUID);
+            bool foundUuid = _lastPlayerList.Contains(player.Uuid);
             if (!foundUuid)
             {
-                _adapter.LogDebug("did not find " + player.Name + " by uuid in player list: " + player.UUID);
+                Adapter.LogDebug("did not find " + player.Name + " by uuid in player list: " + player.Uuid);
                 bool foundName = _lastPlayerList.Contains(player.Name);
                 if (!foundName)
                 {
-                    _adapter.LogDebug("did not find " + player.Name + " by name in player list");
+                    Adapter.LogDebug("did not find " + player.Name + " by name in player list");
                     return false;
                 }
-                _adapter.LogDebug("successfully found " + player.Name + " by name in player list");
+                Adapter.LogDebug("successfully found " + player.Name + " by name in player list");
                 return true;
             }
             return foundUuid;
@@ -69,7 +69,7 @@ namespace Tebex.Plugins
         
         public override RconConnection CreateRconConnection(string host, int port, string password)
         {
-            return new RconConnection(_adapter, host, port, password);
+            return new RconConnection(Adapter, host, port, password);
         }
     }   
 }

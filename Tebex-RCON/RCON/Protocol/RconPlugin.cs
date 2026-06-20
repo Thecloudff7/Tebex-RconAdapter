@@ -1,8 +1,6 @@
-using Tebex.Adapters;
-using Tebex.API;
-using Tebex.Triage;
+using Tebex_RCON.Tebex;
 
-namespace Tebex.RCON.Protocol;
+namespace Tebex_RCON.RCON.Protocol;
 
 /// <summary>
 /// An RCON plugin defines logic for enhanced RCON functions such as command success, player online checking, and server events.
@@ -12,12 +10,12 @@ public abstract class RconPlugin
     /// <summary>
     /// Reference to the internal RconAdapter available to this plugin.
     /// </summary>
-    protected TebexRconAdapter _adapter;
+    protected TebexRconAdapter Adapter;
     
     /// <summary>
     /// Reference to the internal RconConnection available to this plugin.
     /// </summary>
-    protected RconConnection _rcon;
+    protected RconConnection? Rcon;
     
     /// <summary>
     /// Creates a new RconPlugin instance.
@@ -25,7 +23,7 @@ public abstract class RconPlugin
     /// <param name="adapter">The RconAdapter that is booting this plugin.</param>
     public RconPlugin(TebexRconAdapter adapter)
     {
-        _adapter = adapter;
+        Adapter = adapter;
     }
     
     /// <summary>
@@ -34,9 +32,9 @@ public abstract class RconPlugin
     /// <returns><see cref="TebexPlatform"/></returns>
     public TebexPlatform GetPlatform()
     {
-        if (_rcon != null)
+        if (Rcon != null)
         {
-            return new TebexPlatform(GetPluginVersion(), new TebexTelemetry("RCON-Adapter", TebexRconAdapter.Version, _rcon.GetType().Name));    
+            return new TebexPlatform(GetPluginVersion(), new TebexTelemetry("RCON-Adapter", TebexRconAdapter.Version, Rcon.GetType().Name));    
         }
         else
         {
@@ -74,11 +72,11 @@ public abstract class RconPlugin
     /// <returns>An instance of the appropriate <see cref="RconConnection"/> for our plugin.</returns>
     public virtual RconConnection CreateRconConnection(string host, int port, string password)
     {
-        if (_rcon == null)
+        if (Rcon == null)
         {
-            _rcon = new RconConnection(_adapter, host, port, password);   
+            Rcon = new RconConnection(Adapter, host, port, password);   
         }
-        return _rcon;
+        return Rcon;
     }
 
     /// <summary>

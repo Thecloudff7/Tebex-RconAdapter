@@ -1,7 +1,7 @@
-﻿using Tebex.Adapters;
-using Tebex.API;
-using Tebex.RCON.Protocol;
-using Tebex.Util;
+﻿using Tebex_RCON.RCON;
+using Tebex_RCON.RCON.Protocol;
+using Tebex_RCON.Tebex;
+using Tebex_RCON.Util;
 
 // Init startup variables
 TebexRconAdapter adapter = new TebexRconAdapter();
@@ -28,6 +28,11 @@ foreach (var arg in arguments)
     else if (arg.Contains("--host="))
     {
         startupHost = arg.Split("--host=")[1].Trim();
+    }
+    
+    else if (arg.Contains("--ip="))
+    {
+        startupHost = arg.Split("--ip=")[1].Trim();
     }
     
     else if (arg.Contains("--port="))
